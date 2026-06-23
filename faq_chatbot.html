@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ Chatbot — CodeAlpha AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #10172a;
+    --surface2: #161e35;
+    --border: #1e2d4d;
+    --accent: #0ea5e9;
+    --accent2: #38bdf8;
+    --accent3: #0284c7;
+    --user-bubble: #1e3a5f;
+    --bot-bubble: #0f1e38;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --green: #22c55e;
+    --yellow: #eab308;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  header {
+    text-align: center;
+    padding: 30px 20px 20px;
+    width: 100%;
+    max-width: 760px;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(14,165,233,0.12);
+    border: 1px solid rgba(14,165,233,0.35);
+    color: var(--accent2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(22px, 3.5vw, 32px);
+    font-weight: 700;
+    background: linear-gradient(135deg, #e2e8f0 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+  .main { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Topic selector */
+  .topic-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .topic-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .topic-btn.active {
+    background: rgba(14,165,233,0.15);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+  .topic-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  /* Chat window */
+  .chat-window {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    height: 420px;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .chat-window::-webkit-scrollbar { width: 5px; }
+  .chat-window::-webkit-scrollbar-track { background: transparent; }
+  .chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .message { display: flex; gap: 10px; max-width: 85%; }
+  .message.user { align-self: flex-end; flex-direction: row-reverse; }
+  .message.bot { align-self: flex-start; }
+
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .message.bot .avatar { background: rgba(14,165,233,0.15); border: 1px solid rgba(14,165,233,0.3); }
+  .message.user .avatar { background: rgba(30,58,95,0.8); border: 1px solid var(--user-bubble); }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .message.bot .bubble {
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+  .message.user .bubble {
+    background: var(--user-bubble);
+    border: 1px solid rgba(14,165,233,0.2);
+    border-bottom-right-radius: 4px;
+    color: #bfdbfe;
+  }
+
+  .bubble .confidence {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-top: 8px;
+  }
+  .conf-high { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .conf-med  { background: rgba(234,179,8,0.1);  color: var(--yellow); border: 1px solid rgba(234,179,8,0.2); }
+  .conf-low  { background: rgba(239,68,68,0.1);   color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .suggestion-chip {
+    background: rgba(14,165,233,0.08);
+    border: 1px solid rgba(14,165,233,0.2);
+    color: var(--accent2);
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .suggestion-chip:hover { background: rgba(14,165,233,0.18); border-color: var(--accent); }
+
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 12px 16px;
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+  }
+  .typing-dot {
+    width: 7px; height: 7px;
+    background: var(--muted);
+    border-radius: 50%;
+    animation: typingBounce 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  .timestamp { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .message.user .timestamp { text-align: right; }
+
+  /* Input area */
+  .input-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .input-area input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+    padding: 4px 0;
+    resize: none;
+  }
+  .input-area input::placeholder { color: var(--muted); }
+  .send-btn {
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    border: none;
+    color: white;
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(14,165,233,0.4); }
+  .send-btn:active { transform: scale(0.97); }
+
+  /* FAQ panel */
+  .faq-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .faq-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .faq-panel-header h3 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .faq-panel-body { padding: 12px; display: none; gap: 6px; flex-wrap: wrap; }
+  .faq-panel-body.open { display: flex; }
+  .faq-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .faq-chip:hover { border-color: var(--accent); color: var(--accent2); background: rgba(14,165,233,0.06); }
+
+  footer { text-align: center; margin-top: 24px; color: var(--muted); font-size: 12px; max-width: 760px; width: 100%; padding-bottom: 20px; }
+  footer span { color: var(--accent2); }
+</style>
+</head>
+<body>
+<header>
+  <div class="badge">CodeAlpha AI · Task 2</div>
+  <h1>🤖 FAQ Chatbot</h1>
+  <p class="subtitle">NLP-powered · Cosine Similarity matching · Real-time responses</p>
+</header>
+
+<div class="main">
+  <div class="topic-bar" id="topicBar"></div>
+
+  <div class="chat-window" id="chatWindow"></div>
+
+  <div class="input-area">
+    <input type="text" id="userInput" placeholder="Ask a question..." onkeydown="handleKey(event)" autocomplete="off" />
+    <button class="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+
+  <div class="faq-panel">
+    <div class="faq-panel-header" onclick="toggleFAQ()">
+      <h3>💡 Browse All FAQs</h3>
+      <span id="faqToggleIcon" style="color:var(--muted);font-size:12px;">▼ Show</span>
+    </div>
+    <div class="faq-panel-body" id="faqPanelBody"></div>
+  </div>
+</div>
+
+<footer>CodeAlpha AI Internship — Task 2 &nbsp;|&nbsp; <span>NLP Cosine Similarity</span> · TF-IDF Text Matching</footer>
+
+<script>
+// ─── FAQ DATA ───────────────────────────────────────────────────────────────
+const faqDB = {
+  "E-Commerce": [
+    {q:"How do I place an order?", a:"To place an order: browse products → add to cart → go to checkout → enter shipping details → select payment method → confirm order. You'll receive an email confirmation instantly! 🛒"},
+    {q:"What payment methods are accepted?", a:"We accept: Credit/Debit Cards (Visa, Mastercard, RuPay), UPI (GPay, PhonePe, Paytm), Net Banking, EMI, and Cash on Delivery (COD) for eligible orders. 💳"},
+    {q:"How can I track my order?", a:"Track your order via: My Orders → select order → click 'Track'. You'll also receive SMS/email updates at each stage. Delivery usually takes 3-7 business days. 📦"},
+    {q:"What is the return policy?", a:"We offer a 30-day return policy. Items must be unused, in original packaging. Initiate returns from My Orders → Request Return. Refund processed within 5-7 business days. 🔄"},
+    {q:"How do I cancel my order?", a:"Cancel before shipment: My Orders → select order → Cancel Order. After shipment, you can refuse delivery or raise a return request. Prepaid orders are refunded within 5-7 days. ❌"},
+    {q:"Is COD available?", a:"Cash on Delivery is available for orders under ₹10,000 in eligible pin codes. COD charges of ₹40 may apply. Check availability at checkout. 💵"},
+    {q:"How do I apply a coupon code?", a:"At checkout, you'll see a 'Apply Coupon' field. Enter your code and click Apply. Valid coupons automatically deduct the discount. One coupon per order. 🏷️"},
+    {q:"Can I change my delivery address?", a:"You can change the address before the order is shipped. Go to My Orders → Edit Address. Once shipped, contact support at 1800-XXX-XXXX for assistance. 📍"},
+    {q:"How do I contact customer support?", a:"Reach us via: Live Chat (available 24/7 on app), Email: support@store.com, Phone: 1800-XXX-XXXX (9 AM–9 PM). Average response time is under 2 hours. 📞"},
+    {q:"What if I receive a damaged product?", a:"Sorry for the trouble! Report within 48 hours via My Orders → Report Issue → Damaged Product. Upload photos. We'll arrange pickup and send a replacement or full refund. 📸"},
+  ],
+  "AI & Technology": [
+    {q:"What is Artificial Intelligence?", a:"Artificial Intelligence (AI) is the simulation of human intelligence by computer systems. It includes learning (machine learning), reasoning, problem-solving, perception, and language understanding. 🤖"},
+    {q:"What is Machine Learning?", a:"Machine Learning (ML) is a subset of AI where systems learn from data without being explicitly programmed. Models improve automatically through experience. Types: Supervised, Unsupervised, Reinforcement Learning. 📊"},
+    {q:"What is Deep Learning?", a:"Deep Learning uses neural networks with many layers (hence 'deep') to learn representations from data. It powers image recognition, speech processing, and NLP tasks. It's a subset of Machine Learning. 🧠"},
+    {q:"What is Natural Language Processing?", a:"NLP is the branch of AI that enables computers to understand, interpret, and generate human language. Applications: chatbots, translation, sentiment analysis, summarization. Libraries: NLTK, SpaCy, Transformers. 💬"},
+    {q:"What is Python used for in AI?", a:"Python is the #1 language for AI/ML due to its simple syntax and rich ecosystem: NumPy, Pandas (data), Scikit-learn (ML), TensorFlow/PyTorch (deep learning), NLTK/SpaCy (NLP). 🐍"},
+    {q:"What is a neural network?", a:"A neural network is a computing system inspired by the human brain, consisting of layers of interconnected 'neurons'. Input layer → Hidden layers → Output layer. They learn by adjusting weights through backpropagation. 🔗"},
+    {q:"What is the difference between AI and ML?", a:"AI is the broader concept of machines mimicking human intelligence. ML is a specific technique within AI where machines learn from data. All ML is AI, but not all AI is ML. Other AI techniques include rule-based systems. ⚡"},
+    {q:"What is overfitting in ML?", a:"Overfitting occurs when a model learns training data too well, including noise, and performs poorly on new data. Solutions: more data, regularization (L1/L2), dropout, cross-validation, simpler model. 📉"},
+    {q:"What is a chatbot?", a:"A chatbot is an AI program that simulates conversation. Rule-based chatbots use predefined responses; AI chatbots use NLP and ML to understand context and generate dynamic responses. Examples: Alexa, Siri, ChatGPT. 💭"},
+    {q:"What is computer vision?", a:"Computer Vision enables machines to interpret visual data (images/video). Applications: object detection, facial recognition, medical imaging, self-driving cars. Tools: OpenCV, YOLO, TensorFlow. 👁️"},
+  ],
+  "General Help": [
+    {q:"How do I reset my password?", a:"Click 'Forgot Password' on the login page. Enter your registered email. Check inbox for reset link (valid 30 min). Click link → set new password → login. If no email received, check spam folder. 🔑"},
+    {q:"How do I create an account?", a:"Click 'Sign Up' → Enter name, email, and strong password → Verify email via OTP → Complete profile. You can also sign up with Google or Facebook for faster access. 📝"},
+    {q:"Is my data secure?", a:"Yes! We use industry-standard 256-bit SSL encryption, two-factor authentication, and regular security audits. We never share your personal data with third parties without consent. 🔒"},
+    {q:"How do I delete my account?", a:"Go to Settings → Account → Delete Account. This action is irreversible. Your data will be permanently deleted within 30 days per our privacy policy. Optionally, download your data first. 🗑️"},
+    {q:"How do I update my profile?", a:"Go to My Profile → Edit Profile. Update name, photo, phone, address. Click Save. Profile picture supports JPEG/PNG up to 5MB. Changes reflect immediately across all devices. ✏️"},
+    {q:"What browsers are supported?", a:"Best experience on: Chrome 90+, Firefox 85+, Edge 90+, Safari 14+. JavaScript and cookies must be enabled. Mobile: iOS Safari 14+ and Chrome for Android are fully supported. 🌐"},
+    {q:"How do I report a bug?", a:"Report bugs via: Help Center → Report Issue → Bug Report. Include: description, steps to reproduce, screenshots/video if possible, device & browser info. Our team responds within 24 hours. 🐛"},
+    {q:"Is there a mobile app available?", a:"Yes! Download from Google Play Store (Android 8+) or Apple App Store (iOS 14+). The app offers all features plus exclusive app-only deals, push notifications, and offline access. 📱"},
+    {q:"How do I contact support?", a:"Support channels: Live Chat (24/7 on website/app), Email: help@example.com, Phone: 1800-XXX-XXXX (Mon–Sat 9AM–9PM), Community Forum for tips & discussions. 📞"},
+    {q:"What is your privacy policy?", a:"Our privacy policy covers data collection, usage, storage, and deletion rights. We collect only necessary data, never sell it, and you can request deletion anytime. Read full policy at /privacy. 📄"},
+  ]
+};
+
+let currentTopic = "E-Commerce";
+let faqs = faqDB[currentTopic];
+let faqOpen = false;
+
+// ─── NLP: TF-IDF Cosine Similarity ──────────────────────────────────────────
+function tokenize(text) {
+  return text.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 1 && !['the','a','an','is','are','was','were','i','my','can','do','how','what','when','where','why','who','which','that','this','it','in','on','at','to','for','of','and','or','not','be','have','has','had','will','would','could','should','does','did','get','got'].includes(w));
+}
+
+function tfIdf(tokens, allDocs) {
+  const tf = {};
+  tokens.forEach(t => tf[t] = (tf[t] || 0) + 1);
+  const tfidf = {};
+  const N = allDocs.length;
+  Object.keys(tf).forEach(term => {
+    const df = allDocs.filter(doc => doc.includes(term)).length;
+    const idf = Math.log((N + 1) / (df + 1)) + 1;
+    tfidf[term] = (tf[term] / tokens.length) * idf;
+  });
+  return tfidf;
+}
+
+function cosineSim(vecA, vecB) {
+  const keys = new Set([...Object.keys(vecA), ...Object.keys(vecB)]);
+  let dot = 0, magA = 0, magB = 0;
+  keys.forEach(k => {
+    const a = vecA[k] || 0, b = vecB[k] || 0;
+    dot += a * b; magA += a * a; magB += b * b;
+  });
+  return magA && magB ? dot / (Math.sqrt(magA) * Math.sqrt(magB)) : 0;
+}
+
+function findBestMatch(query) {
+  const qTokens = tokenize(query);
+  const allFaqs = faqs;
+  const allDocs = allFaqs.map(f => tokenize(f.q + ' ' + f.a));
+  const qVec = tfIdf(qTokens, allDocs);
+
+  let best = null, bestScore = 0;
+  allFaqs.forEach((faq, i) => {
+    const fVec = tfIdf(allDocs[i], allDocs);
+    const score = cosineSim(qVec, fVec);
+    if (score > bestScore) { bestScore = score; best = faq; }
+  });
+
+  return { faq: best, score: bestScore };
+}
+
+// ─── UI Functions ────────────────────────────────────────────────────────────
+function getTime() {
+  return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function appendMessage(role, text, confidence = null, suggestions = null) {
+  const win = document.getElementById('chatWindow');
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+
+  const avatar = role === 'bot' ? '🤖' : '👤';
+  let confBadge = '';
+  if (confidence !== null) {
+    const pct = Math.round(confidence * 100);
+    const cls = pct > 60 ? 'conf-high' : pct > 30 ? 'conf-med' : 'conf-low';
+    confBadge = `<div class="confidence ${cls}">Match: ${pct}%</div>`;
+  }
+  let suggsHTML = '';
+  if (suggestions && suggestions.length) {
+    suggsHTML = '<div class="suggestions">' + suggestions.map(s => `<span class="suggestion-chip" onclick="askSuggestion('${s.replace(/'/g, "\\'")}')">${s}</span>`).join('') + '</div>';
+  }
+
+  div.innerHTML = `
+    <div class="avatar">${avatar}</div>
+    <div>
+      <div class="bubble">${text}${confBadge}${suggsHTML}</div>
+      <div class="timestamp">${getTime()}</div>
+    </div>`;
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+}
+
+function showTyping() {
+  const win = document.getElementById('chatWindow');
+  const div = document.createElement('div');
+  div.className = 'message bot';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="avatar">🤖</div>
+    <div class="typing-indicator">
+      <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+    </div>`;
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function sendMessage(text = null) {
+  const input = document.getElementById('userInput');
+  const query = text || input.value.trim();
+  if (!query) return;
+
+  appendMessage('user', escHtml(query));
+  input.value = '';
+
+  showTyping();
+  setTimeout(() => {
+    removeTyping();
+    processQuery(query);
+  }, 600 + Math.random() * 400);
+}
+
+function processQuery(query) {
+  const lower = query.toLowerCase();
+  // Greetings
+  if (/^(hi|hello|hey|hii|howdy|namaste|sup|yo)\b/.test(lower)) {
+    appendMessage('bot',
+      `👋 <b>Hello!</b> I'm your AI assistant for <b>${currentTopic}</b> FAQs!<br><br>Ask me anything or pick a topic above. I use NLP cosine similarity to find the best matching answer.`,
+      null,
+      faqs.slice(0, 3).map(f => f.q)
+    );
+    return;
+  }
+  if (/\b(bye|goodbye|thanks|thank you|ok done|exit)\b/.test(lower)) {
+    appendMessage('bot', "👋 Goodbye! Feel free to come back anytime. Happy to help! 😊");
+    return;
+  }
+  if (/\bhelp\b/.test(lower)) {
+    appendMessage('bot', `I can answer FAQs about <b>${currentTopic}</b>. Here are some things you can ask:`, null, faqs.slice(0, 4).map(f => f.q));
+    return;
+  }
+
+  const { faq, score } = findBestMatch(query);
+
+  if (!faq || score < 0.05) {
+    appendMessage('bot',
+      `🤔 I couldn't find a good match for <i>"${escHtml(query)}"</i>.<br><br>Try rephrasing, or pick from:`,
+      score,
+      faqs.slice(0, 3).map(f => f.q)
+    );
+  } else {
+    appendMessage('bot', faq.a, score);
+  }
+}
+
+function askSuggestion(q) {
+  appendMessage('user', escHtml(q));
+  showTyping();
+  setTimeout(() => {
+    removeTyping();
+    processQuery(q);
+  }, 500);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter') sendMessage();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setTopic(topic) {
+  currentTopic = topic;
+  faqs = faqDB[topic];
+  document.querySelectorAll('.topic-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.topic === topic);
+  });
+  renderFAQPanel();
+  appendMessage('bot', `📂 Switched to <b>${topic}</b> FAQs! I now have ${faqs.length} questions loaded.<br><br>What would you like to know?`, null, faqs.slice(0, 3).map(f => f.q));
+}
+
+function toggleFAQ() {
+  faqOpen = !faqOpen;
+  document.getElementById('faqPanelBody').className = 'faq-panel-body' + (faqOpen ? ' open' : '');
+  document.getElementById('faqToggleIcon').textContent = faqOpen ? '▲ Hide' : '▼ Show';
+}
+
+function renderFAQPanel() {
+  const body = document.getElementById('faqPanelBody');
+  body.innerHTML = faqs.map(f =>
+    `<span class="faq-chip" onclick="askSuggestion('${f.q.replace(/'/g,"\\'")}')">${f.q}</span>`
+  ).join('');
+}
+
+// Init
+function init() {
+  // Render topic buttons
+  const bar = document.getElementById('topicBar');
+  Object.keys(faqDB).forEach(topic => {
+    const btn = document.createElement('button');
+    btn.className = 'topic-btn' + (topic === currentTopic ? ' active' : '');
+    btn.dataset.topic = topic;
+    btn.textContent = { "E-Commerce": "🛒 E-Commerce", "AI & Technology": "🤖 AI & Tech", "General Help": "❓ General Help" }[topic];
+    btn.onclick = () => setTopic(topic);
+    bar.appendChild(btn);
+  });
+
+  renderFAQPanel();
+
+  // Welcome message
+  appendMessage('bot',
+    `👋 <b>Welcome to the AI FAQ Chatbot!</b><br><br>
+I use <b>TF-IDF + Cosine Similarity</b> to match your questions to the best answer from my FAQ database.<br><br>
+Currently loaded: <b>${currentTopic}</b> (${faqs.length} FAQs). Try asking something!`,
+    null,
+    faqs.slice(0, 3).map(f => f.q)
+  );
+}
+
+init();
+</script>
+</body>
+</html>
